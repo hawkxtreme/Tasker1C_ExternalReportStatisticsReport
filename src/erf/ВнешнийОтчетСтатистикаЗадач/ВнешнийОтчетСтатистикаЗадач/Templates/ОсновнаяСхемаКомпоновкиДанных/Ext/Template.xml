@@ -1,0 +1,668 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<DataCompositionSchema xmlns="http://v8.1c.ru/8.1/data-composition-system/schema" xmlns:dcscom="http://v8.1c.ru/8.1/data-composition-system/common" xmlns:dcscor="http://v8.1c.ru/8.1/data-composition-system/core" xmlns:dcsset="http://v8.1c.ru/8.1/data-composition-system/settings" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:v8ui="http://v8.1c.ru/8.1/data/ui" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<dataSource>
+		<name>ИсточникДанных1</name>
+		<dataSourceType>Local</dataSourceType>
+	</dataSource>
+	<dataSet xsi:type="DataSetQuery">
+		<name>НаборДанных1</name>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Дата</dataPath>
+			<field>Дата</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Дата</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>КоличествоЗакрытыхЗадач</dataPath>
+			<field>КоличествоЗакрытыхЗадач</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Количество закрытых задач</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>Задача</dataPath>
+			<field>Задача</field>
+			<role>
+				<dcscom:dimension>true</dcscom:dimension>
+			</role>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>КоличествоОткрытыхЗадач</dataPath>
+			<field>КоличествоОткрытыхЗадач</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Количество открытых задач</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<field xsi:type="DataSetFieldField">
+			<dataPath>КоличествоАктивныхЗадач</dataPath>
+			<field>КоличествоАктивныхЗадач</field>
+			<title xsi:type="v8:LocalStringType">
+				<v8:item>
+					<v8:lang>ru</v8:lang>
+					<v8:content>Количество активных задач</v8:content>
+				</v8:item>
+			</title>
+		</field>
+		<dataSource>ИсточникДанных1</dataSource>
+		<query>ВЫБРАТЬ
+	КалендарныеГрафики.ДатаГрафика КАК Дата
+ПОМЕСТИТЬ ВТ_Даты
+ИЗ
+	РегистрСведений.КалендарныеГрафики КАК КалендарныеГрафики
+ГДЕ
+	КалендарныеГрафики.ДатаГрафика МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+	И КалендарныеГрафики.ДеньВключенВГрафик
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	НАЧАЛОПЕРИОДА(&amp;НачалоПериода, ДЕНЬ) КАК Дата,
+	&amp;НачалоПериода КАК ДатаВремя,
+	узСтатусыЗадачСрезПоследних.Задача КАК Задача,
+	узСтатусыЗадачСрезПоследних.Статус КАК Статус
+ПОМЕСТИТЬ ВТ_Задачи
+ИЗ
+	РегистрСведений.узСтатусыЗадач.СрезПоследних(&amp;НачалоПериода {(&amp;НачалоПериода)}, НЕ Задача.ЭтоОсновнаяЗадача) КАК узСтатусыЗадачСрезПоследних
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	НАЧАЛОПЕРИОДА(узСтатусыЗадач.Период, ДЕНЬ),
+	узСтатусыЗадач.Период,
+	узСтатусыЗадач.Задача,
+	узСтатусыЗадач.Статус
+ИЗ
+	РегистрСведений.узСтатусыЗадач КАК узСтатусыЗадач
+ГДЕ
+	узСтатусыЗадач.Период МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+	И НЕ узСтатусыЗадач.Задача.ЭтоОсновнаяЗадача
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	НАЧАЛОПЕРИОДА(&amp;КонецПериода, ДЕНЬ),
+	&amp;КонецПериода,
+	узСтатусыЗадачСрезПоследних.Задача,
+	узСтатусыЗадачСрезПоследних.Статус
+ИЗ
+	РегистрСведений.узСтатусыЗадач.СрезПоследних(&amp;КонецПериода {(&amp;КонецПериода)}, НЕ Задача.ЭтоОсновнаяЗадача) КАК узСтатусыЗадачСрезПоследних
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_Задачи.ДатаВремя КАК ДатаВремя,
+	ВТ_Задачи.Дата КАК Дата,
+	МИНИМУМ(ВЫБОР
+			КОГДА ВТ_Задачи1.Дата ЕСТЬ NULL
+				ТОГДА ВТ_Задачи.Дата
+			ИНАЧЕ ВТ_Задачи1.Дата
+		КОНЕЦ) КАК ДатаСледущегоСобытия,
+	ВТ_Задачи.Статус КАК Статус,
+	ВТ_Задачи.Задача КАК Задача
+ПОМЕСТИТЬ ВТ_ЗадачиДаты
+ИЗ
+	ВТ_Задачи КАК ВТ_Задачи
+		ЛЕВОЕ СОЕДИНЕНИЕ ВТ_Задачи КАК ВТ_Задачи1
+		ПО ВТ_Задачи.Задача = ВТ_Задачи1.Задача
+			И ВТ_Задачи.ДатаВремя &lt; ВТ_Задачи1.ДатаВремя
+
+СГРУППИРОВАТЬ ПО
+	ВТ_Задачи.Дата,
+	ВТ_Задачи.Задача,
+	ВТ_Задачи.Статус,
+	ВТ_Задачи.ДатаВремя
+
+ИМЕЮЩИЕ
+	МИНИМУМ(ВЫБОР
+			КОГДА ВТ_Задачи1.Дата ЕСТЬ NULL
+				ТОГДА ВТ_Задачи.Дата
+			ИНАЧЕ ВТ_Задачи1.Дата
+		КОНЕЦ) &lt;&gt; ВТ_Задачи.Дата
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВЫБОР
+		КОГДА НАЧАЛОПЕРИОДА(ВТ_ЗадачиДаты.ДатаВремя, ДЕНЬ) = ВТ_Даты.Дата
+			ТОГДА ВТ_ЗадачиДаты.ДатаВремя
+		ИНАЧЕ ВТ_Даты.Дата
+	КОНЕЦ КАК ДатаВремя,
+	ВТ_Даты.Дата КАК Дата,
+	ВТ_ЗадачиДаты.Статус КАК Статус,
+	ВТ_ЗадачиДаты.Задача КАК Задача
+ПОМЕСТИТЬ ВТ_ЗадачиНаКаждуюДату
+ИЗ
+	ВТ_ЗадачиДаты КАК ВТ_ЗадачиДаты
+		ЛЕВОЕ СОЕДИНЕНИЕ ВТ_Даты КАК ВТ_Даты
+		ПО (ВТ_Даты.Дата МЕЖДУ ВТ_ЗадачиДаты.Дата И ВТ_ЗадачиДаты.ДатаСледущегоСобытия)
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_Задачи.Дата КАК Дата,
+	ВТ_Задачи.ДатаВремя КАК ДатаВремя,
+	ВТ_Задачи.Задача КАК Задача,
+	ВТ_Задачи.Статус КАК Статус
+ПОМЕСТИТЬ ВТ_ЗадачиВсе
+ИЗ
+	ВТ_Задачи КАК ВТ_Задачи
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	ВТ_ЗадачиНаКаждуюДату.Дата,
+	ВТ_ЗадачиНаКаждуюДату.ДатаВремя,
+	ВТ_ЗадачиНаКаждуюДату.Задача,
+	ВТ_ЗадачиНаКаждуюДату.Статус
+ИЗ
+	ВТ_ЗадачиНаКаждуюДату КАК ВТ_ЗадачиНаКаждуюДату
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_ЗадачиВсе.Дата КАК Дата,
+	ВТ_ЗадачиВсе.ДатаВремя КАК ДатаВремя,
+	ВТ_ЗадачиВсе.Задача КАК Задача,
+	ВТ_ЗадачиВсе.Статус КАК Статус
+ПОМЕСТИТЬ ВТ_ЗадачиВсеСгруппированные
+ИЗ
+	ВТ_ЗадачиВсе КАК ВТ_ЗадачиВсе
+ГДЕ
+	ВТ_ЗадачиВсе.Дата В
+			(ВЫБРАТЬ
+				ВТ_Даты.Дата КАК Дата
+			ИЗ
+				ВТ_Даты КАК ВТ_Даты)
+
+СГРУППИРОВАТЬ ПО
+	ВТ_ЗадачиВсе.Дата,
+	ВТ_ЗадачиВсе.ДатаВремя,
+	ВТ_ЗадачиВсе.Задача,
+	ВТ_ЗадачиВсе.Статус
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_ЗадачиВсеСгруппированные.Дата КАК Дата,
+	НАЧАЛОПЕРИОДА(ВТ_ЗадачиВсеСгруппированные.ДатаВремя, ДЕНЬ) КАК ДатаВремя,
+	ВТ_ЗадачиВсеСгруппированные.Задача КАК Задача
+ПОМЕСТИТЬ ВТ_АктивныеЗадачи
+ИЗ
+	ВТ_ЗадачиВсеСгруппированные КАК ВТ_ЗадачиВсеСгруппированные
+ГДЕ
+	НЕ ВТ_ЗадачиВсеСгруппированные.Статус В (&amp;СтатусыЗакрытыхЗадач)
+
+СГРУППИРОВАТЬ ПО
+	ВТ_ЗадачиВсеСгруппированные.Дата,
+	ВТ_ЗадачиВсеСгруппированные.Задача,
+	НАЧАЛОПЕРИОДА(ВТ_ЗадачиВсеСгруппированные.ДатаВремя, ДЕНЬ)
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	НАЧАЛОПЕРИОДА(ВТ_Задачи.Задача.ДатаСоздания, ДЕНЬ) КАК Дата,
+	ВТ_Задачи.Задача КАК Задача
+ПОМЕСТИТЬ ВТ_ОткрытыеЗадачи
+ИЗ
+	ВТ_Задачи КАК ВТ_Задачи
+ГДЕ
+	ВТ_Задачи.Задача.ДатаСоздания МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+
+СГРУППИРОВАТЬ ПО
+	НАЧАЛОПЕРИОДА(ВТ_Задачи.Задача.ДатаСоздания, ДЕНЬ),
+	ВТ_Задачи.Задача
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	НАЧАЛОПЕРИОДА(ВТ_Задачи.Задача.ДатаВыполнения, ДЕНЬ) КАК Дата,
+	ВТ_Задачи.Задача КАК Задача
+ПОМЕСТИТЬ ВТ_ЗакрытыеЗадачи
+ИЗ
+	ВТ_Задачи КАК ВТ_Задачи
+ГДЕ
+	ВТ_Задачи.Статус В(&amp;СтатусыЗакрытыхЗадач)
+	И ВТ_Задачи.Задача.ДатаВыполнения МЕЖДУ &amp;НачалоПериода И &amp;КонецПериода
+
+СГРУППИРОВАТЬ ПО
+	НАЧАЛОПЕРИОДА(ВТ_Задачи.Задача.ДатаВыполнения, ДЕНЬ),
+	ВТ_Задачи.Задача
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_АктивныеЗадачи.ДатаВремя КАК Дата,
+	ВТ_АктивныеЗадачи.Задача КАК Задача,
+	1 КАК КоличествоАктивныхЗадач,
+	0 КАК КоличествоОткрытыхЗадач,
+	0 КАК КоличествоЗакрытыхЗадач
+ПОМЕСТИТЬ ВТ_Итог
+ИЗ
+	ВТ_АктивныеЗадачи КАК ВТ_АктивныеЗадачи
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	ВТ_ОткрытыеЗадачи.Дата,
+	ВТ_ОткрытыеЗадачи.Задача,
+	0,
+	1,
+	0
+ИЗ
+	ВТ_ОткрытыеЗадачи КАК ВТ_ОткрытыеЗадачи
+
+ОБЪЕДИНИТЬ ВСЕ
+
+ВЫБРАТЬ
+	ВТ_ЗакрытыеЗадачи.Дата,
+	ВТ_ЗакрытыеЗадачи.Задача,
+	0,
+	0,
+	1
+ИЗ
+	ВТ_ЗакрытыеЗадачи КАК ВТ_ЗакрытыеЗадачи
+;
+
+////////////////////////////////////////////////////////////////////////////////
+ВЫБРАТЬ
+	ВТ_Итог.Дата КАК Дата,
+	ВТ_Итог.Задача КАК Задача,
+	СУММА(ВТ_Итог.КоличествоАктивныхЗадач) КАК КоличествоАктивныхЗадач,
+	СУММА(ВТ_Итог.КоличествоОткрытыхЗадач) КАК КоличествоОткрытыхЗадач,
+	СУММА(ВТ_Итог.КоличествоЗакрытыхЗадач) КАК КоличествоЗакрытыхЗадач
+{ВЫБРАТЬ
+	Дата,
+	Задача.*,
+	КоличествоАктивныхЗадач,
+	КоличествоОткрытыхЗадач,
+	КоличествоЗакрытыхЗадач}
+ИЗ
+	ВТ_Итог КАК ВТ_Итог
+{ГДЕ
+	ВТ_Итог.Дата,
+	ВТ_Итог.Задача.*,
+	ВТ_Итог.КоличествоАктивныхЗадач,
+	ВТ_Итог.КоличествоОткрытыхЗадач,
+	ВТ_Итог.КоличествоЗакрытыхЗадач}
+
+СГРУППИРОВАТЬ ПО
+	ВТ_Итог.Дата,
+	ВТ_Итог.Задача</query>
+		<autoFillFields>false</autoFillFields>
+	</dataSet>
+	<totalField>
+		<dataPath>КоличествоАктивныхЗадач</dataPath>
+		<expression>Сумма(КоличествоАктивныхЗадач)</expression>
+	</totalField>
+	<totalField>
+		<dataPath>КоличествоЗакрытыхЗадач</dataPath>
+		<expression>Сумма(КоличествоЗакрытыхЗадач)</expression>
+	</totalField>
+	<totalField>
+		<dataPath>КоличествоОткрытыхЗадач</dataPath>
+		<expression>Сумма(КоличествоОткрытыхЗадач)</expression>
+	</totalField>
+	<parameter>
+		<name>КонецПериода</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Конец периода</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:dateTime</v8:Type>
+			<v8:DateQualifiers>
+				<v8:DateFractions>DateTime</v8:DateFractions>
+			</v8:DateQualifiers>
+		</valueType>
+		<value xsi:type="xs:dateTime">0001-01-01T00:00:00</value>
+		<useRestriction>true</useRestriction>
+		<expression>&amp;ПериодОтчета.ДатаОкончания</expression>
+	</parameter>
+	<parameter>
+		<name>НачалоПериода</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Начало периода</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>xs:dateTime</v8:Type>
+			<v8:DateQualifiers>
+				<v8:DateFractions>DateTime</v8:DateFractions>
+			</v8:DateQualifiers>
+		</valueType>
+		<value xsi:type="xs:dateTime">0001-01-01T00:00:00</value>
+		<useRestriction>true</useRestriction>
+		<expression>&amp;ПериодОтчета.ДатаНачала</expression>
+	</parameter>
+	<parameter>
+		<name>СтатусыЗакрытыхЗадач</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Статусы закрытых задач</v8:content>
+			</v8:item>
+		</title>
+		<useRestriction>false</useRestriction>
+		<valueListAllowed>true</valueListAllowed>
+	</parameter>
+	<parameter>
+		<name>ПериодОтчета</name>
+		<title xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>Период</v8:content>
+			</v8:item>
+		</title>
+		<valueType>
+			<v8:Type>v8:StandardPeriod</v8:Type>
+		</valueType>
+		<value xsi:type="v8:StandardPeriod">
+			<v8:variant xsi:type="v8:StandardPeriodVariant">Custom</v8:variant>
+			<v8:startDate>0001-01-01T00:00:00</v8:startDate>
+			<v8:endDate>0001-01-01T00:00:00</v8:endDate>
+		</value>
+		<useRestriction>false</useRestriction>
+	</parameter>
+	<settingsVariant>
+		<dcsset:name>ПоДням</dcsset:name>
+		<dcsset:presentation xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>По дням</v8:content>
+			</v8:item>
+		</dcsset:presentation>
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+			<dcsset:selection>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоАктивныхЗадач</dcsset:field>
+					<dcsset:lwsTitle>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Активные задачи</v8:content>
+						</v8:item>
+					</dcsset:lwsTitle>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоЗакрытыхЗадач</dcsset:field>
+					<dcsset:lwsTitle>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Закрыто задач</v8:content>
+						</v8:item>
+					</dcsset:lwsTitle>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоОткрытыхЗадач</dcsset:field>
+					<dcsset:lwsTitle>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Открыто задач</v8:content>
+						</v8:item>
+					</dcsset:lwsTitle>
+				</dcsset:item>
+			</dcsset:selection>
+			<dcsset:dataParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:use>false</dcscor:use>
+					<dcscor:parameter>СтатусыЗакрытыхЗадач</dcscor:parameter>
+					<dcscor:value xsi:nil="true"/>
+					<dcsset:userSettingID>9a7fb10f-155a-4712-b6fd-82821c8ed772</dcsset:userSettingID>
+				</dcscor:item>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:use>false</dcscor:use>
+					<dcscor:parameter>ПериодОтчета</dcscor:parameter>
+					<dcscor:value xsi:type="v8:StandardPeriod">
+						<v8:variant xsi:type="v8:StandardPeriodVariant">Custom</v8:variant>
+						<v8:startDate>0001-01-01T00:00:00</v8:startDate>
+						<v8:endDate>0001-01-01T00:00:00</v8:endDate>
+					</dcscor:value>
+					<dcsset:userSettingID>c29ff349-a810-4022-9068-4308236ff7eb</dcsset:userSettingID>
+				</dcscor:item>
+			</dcsset:dataParameters>
+			<dcsset:outputParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:parameter>МакетОформления</dcscor:parameter>
+					<dcscor:value xsi:type="xs:string">Зеленый</dcscor:value>
+				</dcscor:item>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:parameter>ТипДиаграммы</dcscor:parameter>
+					<dcscor:value xsi:type="v8ui:ChartType">Column3D</dcscor:value>
+					<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+						<dcscor:use>false</dcscor:use>
+						<dcscor:parameter>ТипДиаграммы.ОтображатьТаблицуДанных</dcscor:parameter>
+						<dcscor:value xsi:type="xs:boolean">true</dcscor:value>
+					</dcscor:item>
+				</dcscor:item>
+			</dcsset:outputParameters>
+			<dcsset:item xsi:type="dcsset:StructureItemChart">
+				<dcsset:point>
+					<dcsset:groupItems>
+						<dcsset:item xsi:type="dcsset:GroupItemField">
+							<dcsset:field>Дата</dcsset:field>
+							<dcsset:groupType>Items</dcsset:groupType>
+							<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+							<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+							<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+						</dcsset:item>
+					</dcsset:groupItems>
+					<dcsset:order>
+						<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+					</dcsset:order>
+					<dcsset:selection>
+						<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+					</dcsset:selection>
+				</dcsset:point>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+			</dcsset:item>
+			<dcsset:item xsi:type="dcsset:StructureItemGroup">
+				<dcsset:groupItems>
+					<dcsset:item xsi:type="dcsset:GroupItemField">
+						<dcsset:field>Дата</dcsset:field>
+						<dcsset:groupType>Items</dcsset:groupType>
+						<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+						<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+						<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+					</dcsset:item>
+				</dcsset:groupItems>
+				<dcsset:order>
+					<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+				</dcsset:order>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+				<dcsset:item xsi:type="dcsset:StructureItemGroup">
+					<dcsset:groupItems>
+						<dcsset:item xsi:type="dcsset:GroupItemField">
+							<dcsset:field>Задача.Важность</dcsset:field>
+							<dcsset:groupType>Items</dcsset:groupType>
+							<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+							<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+							<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+						</dcsset:item>
+					</dcsset:groupItems>
+					<dcsset:order>
+						<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+					</dcsset:order>
+					<dcsset:selection>
+						<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+					</dcsset:selection>
+					<dcsset:item xsi:type="dcsset:StructureItemGroup">
+						<dcsset:groupItems>
+							<dcsset:item xsi:type="dcsset:GroupItemField">
+								<dcsset:field>Задача</dcsset:field>
+								<dcsset:groupType>Items</dcsset:groupType>
+								<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+								<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+								<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+							</dcsset:item>
+						</dcsset:groupItems>
+						<dcsset:order>
+							<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+						</dcsset:order>
+						<dcsset:selection>
+							<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+						</dcsset:selection>
+					</dcsset:item>
+				</dcsset:item>
+			</dcsset:item>
+		</dcsset:settings>
+	</settingsVariant>
+	<settingsVariant>
+		<dcsset:name>ПоМесяцам</dcsset:name>
+		<dcsset:presentation xsi:type="v8:LocalStringType">
+			<v8:item>
+				<v8:lang>ru</v8:lang>
+				<v8:content>По месяцам</v8:content>
+			</v8:item>
+		</dcsset:presentation>
+		<dcsset:settings xmlns:style="http://v8.1c.ru/8.1/data/ui/style" xmlns:sys="http://v8.1c.ru/8.1/data/ui/fonts/system" xmlns:web="http://v8.1c.ru/8.1/data/ui/colors/web" xmlns:win="http://v8.1c.ru/8.1/data/ui/colors/windows">
+			<dcsset:selection>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоАктивныхЗадач</dcsset:field>
+					<dcsset:lwsTitle>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Активные задачи</v8:content>
+						</v8:item>
+					</dcsset:lwsTitle>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоЗакрытыхЗадач</dcsset:field>
+					<dcsset:lwsTitle>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Закрыто задач</v8:content>
+						</v8:item>
+					</dcsset:lwsTitle>
+				</dcsset:item>
+				<dcsset:item xsi:type="dcsset:SelectedItemField">
+					<dcsset:field>КоличествоОткрытыхЗадач</dcsset:field>
+					<dcsset:lwsTitle>
+						<v8:item>
+							<v8:lang>ru</v8:lang>
+							<v8:content>Открыто задач</v8:content>
+						</v8:item>
+					</dcsset:lwsTitle>
+				</dcsset:item>
+			</dcsset:selection>
+			<dcsset:dataParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:use>false</dcscor:use>
+					<dcscor:parameter>СтатусыЗакрытыхЗадач</dcscor:parameter>
+					<dcscor:value xsi:nil="true"/>
+					<dcsset:userSettingID>9a7fb10f-155a-4712-b6fd-82821c8ed772</dcsset:userSettingID>
+				</dcscor:item>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:use>false</dcscor:use>
+					<dcscor:parameter>ПериодОтчета</dcscor:parameter>
+					<dcscor:value xsi:type="v8:StandardPeriod">
+						<v8:variant xsi:type="v8:StandardPeriodVariant">Custom</v8:variant>
+						<v8:startDate>0001-01-01T00:00:00</v8:startDate>
+						<v8:endDate>0001-01-01T00:00:00</v8:endDate>
+					</dcscor:value>
+					<dcsset:userSettingID>c29ff349-a810-4022-9068-4308236ff7eb</dcsset:userSettingID>
+				</dcscor:item>
+			</dcsset:dataParameters>
+			<dcsset:outputParameters>
+				<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+					<dcscor:parameter>ТипДиаграммы</dcscor:parameter>
+					<dcscor:value xsi:type="v8ui:ChartType">Column3D</dcscor:value>
+					<dcscor:item xsi:type="dcsset:SettingsParameterValue">
+						<dcscor:use>false</dcscor:use>
+						<dcscor:parameter>ТипДиаграммы.ОтображатьТаблицуДанных</dcscor:parameter>
+						<dcscor:value xsi:type="xs:boolean">true</dcscor:value>
+					</dcscor:item>
+				</dcscor:item>
+			</dcsset:outputParameters>
+			<dcsset:item xsi:type="dcsset:StructureItemChart">
+				<dcsset:point>
+					<dcsset:groupItems>
+						<dcsset:item xsi:type="dcsset:GroupItemField">
+							<dcsset:field>Дата.ДатыНачала.НачалоМесяца</dcsset:field>
+							<dcsset:groupType>Items</dcsset:groupType>
+							<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+							<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+							<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+						</dcsset:item>
+					</dcsset:groupItems>
+					<dcsset:order>
+						<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+					</dcsset:order>
+					<dcsset:selection>
+						<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+					</dcsset:selection>
+				</dcsset:point>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+			</dcsset:item>
+			<dcsset:item xsi:type="dcsset:StructureItemGroup">
+				<dcsset:groupItems>
+					<dcsset:item xsi:type="dcsset:GroupItemField">
+						<dcsset:field>Дата.ДатыНачала.НачалоМесяца</dcsset:field>
+						<dcsset:groupType>Items</dcsset:groupType>
+						<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+						<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+						<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+					</dcsset:item>
+				</dcsset:groupItems>
+				<dcsset:order>
+					<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+				</dcsset:order>
+				<dcsset:selection>
+					<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+				</dcsset:selection>
+				<dcsset:item xsi:type="dcsset:StructureItemGroup">
+					<dcsset:groupItems>
+						<dcsset:item xsi:type="dcsset:GroupItemField">
+							<dcsset:field>Задача.Важность</dcsset:field>
+							<dcsset:groupType>Items</dcsset:groupType>
+							<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+							<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+							<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+						</dcsset:item>
+					</dcsset:groupItems>
+					<dcsset:order>
+						<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+					</dcsset:order>
+					<dcsset:selection>
+						<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+					</dcsset:selection>
+					<dcsset:item xsi:type="dcsset:StructureItemGroup">
+						<dcsset:groupItems>
+							<dcsset:item xsi:type="dcsset:GroupItemField">
+								<dcsset:field>Задача</dcsset:field>
+								<dcsset:groupType>Items</dcsset:groupType>
+								<dcsset:periodAdditionType>None</dcsset:periodAdditionType>
+								<dcsset:periodAdditionBegin xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionBegin>
+								<dcsset:periodAdditionEnd xsi:type="xs:dateTime">0001-01-01T00:00:00</dcsset:periodAdditionEnd>
+							</dcsset:item>
+						</dcsset:groupItems>
+						<dcsset:order>
+							<dcsset:item xsi:type="dcsset:OrderItemAuto"/>
+						</dcsset:order>
+						<dcsset:selection>
+							<dcsset:item xsi:type="dcsset:SelectedItemAuto"/>
+						</dcsset:selection>
+					</dcsset:item>
+				</dcsset:item>
+			</dcsset:item>
+		</dcsset:settings>
+	</settingsVariant>
+</DataCompositionSchema>
